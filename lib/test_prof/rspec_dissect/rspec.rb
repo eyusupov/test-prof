@@ -30,6 +30,10 @@ module TestProf
         @examples_count = 0
         @examples_time = 0.0
         @total_examples_time = 0.0
+
+        return unless RSpecDissect.config.write_csv?
+        File.write(build_path, nil)
+        TestProf.write_csv(build_path, ['total', 'count', 'before', 'memo', 'desc', 'loc'])
       end
 
       def example_finished(notification)
@@ -53,6 +57,8 @@ module TestProf
 
         @before_results << data
         @memo_results << data
+
+        TestProf.write_csv(build_path, data.values) if RSpecDissect.config.write_csv?
 
         @total_examples_time += @examples_time
         @examples_count = 0
@@ -145,6 +151,10 @@ module TestProf
       end
 
       private
+
+      def build_path
+        TestProf.artifact_path("rspec_dissect-report.csv")
+      end
 
       def top_count
         RSpecDissect.config.top_count

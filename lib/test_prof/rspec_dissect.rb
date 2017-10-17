@@ -38,8 +38,13 @@ module TestProf
       def initialize
         @top_count = (ENV['RD_PROF_TOP'] || 5).to_i
         @stamp = ENV['RD_PROF_STAMP']
+        @write_csv = ENV['RD_PROF_WRITE_CSV']
 
         RSpecStamp.config.tags = @stamp if stamp?
+      end
+
+      def write_csv?
+        !@write_csv.nil?
       end
 
       def stamp?
