@@ -32,7 +32,7 @@ module TestProf
       }.freeze
 
       attr_accessor :instrumenter, :top_count, :per_example,
-                    :rank_by, :event
+                    :rank_by, :event, :write_csv
 
       def initialize
         @event = ENV['EVENT_PROF']
@@ -41,6 +41,7 @@ module TestProf
         @per_example = ENV['EVENT_PROF_EXAMPLES'] == '1'
         @rank_by = (ENV['EVENT_PROF_RANK'] || :time).to_sym
         @stamp = ENV['EVENT_PROF_STAMP']
+        @write_csv = ENV['EVENT_PROF_CSV']
 
         RSpecStamp.config.tags = @stamp if stamp?
       end
@@ -130,6 +131,10 @@ module TestProf
         @groups << data unless data[rank_by].zero?
 
         @current_group = nil
+
+        return unless config.write_csv
+        # TODO: this is rspec-specific
+        write_csv(build_path('example'), [id.metadata[:location], id.top_level_description, @time, @count, @total_examples])
       end
 
       def example_started(id)
@@ -145,6 +150,10 @@ module TestProf
         data = { id: id, time: @example_time, count: @example_count }
         @examples << data unless data[rank_by].zero?
         @current_example = nil
+
+        return unless config.write_csv
+        # TODO: this is rspec-specific
+        write_csv(build_path('example'), [id.metadata[:location], id.description, @example_time, @example_count])
       end
 
       def results
@@ -166,6 +175,17 @@ module TestProf
       end
 
       private
+
+      def write_csv(path, data)
+        line = data.join("\t") + "\n"
+        File.write(path, line, mode: 'a')
+      end
+
+      def build_path(mode)
+        TestProf.artifact_path(
+          "event-prof-report-#{config.event}-#{mode}.csv"
+        )
+      end
 
       def config
         EventProf.config
