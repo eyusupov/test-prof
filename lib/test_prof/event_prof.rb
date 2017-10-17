@@ -46,6 +46,10 @@ module TestProf
         RSpecStamp.config.tags = @stamp if stamp?
       end
 
+      def write_csv?
+        !@write_csv.nil?
+      end
+
       def stamp?
         !@stamp.nil?
       end
@@ -104,6 +108,10 @@ module TestProf
 
         @total_count = 0
         @total_time = 0.0
+
+        return unless config.write_csv?
+        File.write(build_path('group'), nil)
+        File.write(build_path('example'), nil) if config.per_example?
       end
 
       def track(time)
@@ -132,9 +140,9 @@ module TestProf
 
         @current_group = nil
 
-        return unless config.write_csv
+        return unless config.write_csv?
         # TODO: this is rspec-specific
-        write_csv(build_path('example'), [id.metadata[:location], id.top_level_description, @time, @count, @total_examples])
+        TestProf.write_csv(build_path('group'), [id.metadata[:location], id.top_level_description, @time, @count, @total_examples])
       end
 
       def example_started(id)
@@ -151,9 +159,9 @@ module TestProf
         @examples << data unless data[rank_by].zero?
         @current_example = nil
 
-        return unless config.write_csv
+        return unless config.write_csv?
         # TODO: this is rspec-specific
-        write_csv(build_path('example'), [id.metadata[:location], id.description, @example_time, @example_count])
+        TestProf.write_csv(build_path('example'), [id.metadata[:location], id.description, @example_time, @example_count])
       end
 
       def results
@@ -176,14 +184,9 @@ module TestProf
 
       private
 
-      def write_csv(path, data)
-        line = data.join("\t") + "\n"
-        File.write(path, line, mode: 'a')
-      end
-
       def build_path(mode)
         TestProf.artifact_path(
-          "event-prof-report-#{config.event}-#{mode}.csv"
+          "event-prof-report-#{event}-#{mode}.csv"
         )
       end
 

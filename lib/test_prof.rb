@@ -87,6 +87,11 @@ module TestProf
       FileUtils.mkdir_p(config.output_dir)[0]
     end
 
+    def write_csv(path, data)
+      line = data.join("\t") + "\n"
+      File.write(path, line, mode: 'a')
+    end
+
     private
 
     def activate!(env_var, val)
