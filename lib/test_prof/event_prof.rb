@@ -41,7 +41,7 @@ module TestProf
         @per_example = ENV['EVENT_PROF_EXAMPLES'] == '1'
         @rank_by = (ENV['EVENT_PROF_RANK'] || :time).to_sym
         @stamp = ENV['EVENT_PROF_STAMP']
-        @write_csv = ENV['EVENT_PROF_CSV']
+        @write_csv = ENV['EVENT_PROF_WRITE_CSV']
 
         RSpecStamp.config.tags = @stamp if stamp?
       end
