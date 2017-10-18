@@ -193,9 +193,8 @@ module TestProf
       private
 
       def build_path(mode)
-        TestProf.artifact_path(
-          "event-prof-report-#{event}-#{mode}.json"
-        )
+        @paths ||= {}
+        @paths[mode] ||= TestProf.artifact_path("event-prof-report-#{event}-#{mode}.json")
       end
 
       def config

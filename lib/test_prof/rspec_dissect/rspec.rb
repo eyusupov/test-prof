@@ -156,7 +156,7 @@ module TestProf
       private
 
       def build_path
-        TestProf.artifact_path("rspec_dissect-report.json")
+        @path ||= TestProf.artifact_path("rspec_dissect-report.json")
       end
 
       def top_count
