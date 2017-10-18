@@ -87,9 +87,20 @@ module TestProf
       FileUtils.mkdir_p(config.output_dir)[0]
     end
 
-    def write_csv(path, data)
-      line = data.join("\t") + "\n"
-      File.write(path, line, mode: 'a')
+    def start_json(path)
+      File.write(path, "[\n", mode: 'w')
+    end
+
+    def write_json(path, data)
+      File.write(path, JSON.dump(data), mode: 'a')
+      File.write(path, ",\n", mode: 'a')
+    end
+
+    def finish_json(path)
+      File.open(path, mode: 'r+') do |f|
+        f.seek(-2, :END)
+        f.write("\n]\n")
+      end
     end
 
     private

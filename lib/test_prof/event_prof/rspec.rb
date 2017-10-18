@@ -19,6 +19,7 @@ module TestProf
         example_failed
         example_passed
         example_pending
+        stop
       ].freeze
 
       def initialize
@@ -41,6 +42,10 @@ module TestProf
 
       def example_finished(notification)
         @profiler.example_finished notification.example
+      end
+
+      def stop(notification)
+        @profiler.suite_finished
       end
 
       # NOTE: RSpec < 3.4.0 doesn't have example_finished event

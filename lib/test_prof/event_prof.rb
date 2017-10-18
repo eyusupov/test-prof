@@ -32,7 +32,7 @@ module TestProf
       }.freeze
 
       attr_accessor :instrumenter, :top_count, :per_example,
-                    :rank_by, :event, :write_csv
+                    :rank_by, :event, :write_json
 
       def initialize
         @event = ENV['EVENT_PROF']
@@ -41,13 +41,13 @@ module TestProf
         @per_example = ENV['EVENT_PROF_EXAMPLES'] == '1'
         @rank_by = (ENV['EVENT_PROF_RANK'] || :time).to_sym
         @stamp = ENV['EVENT_PROF_STAMP']
-        @write_csv = ENV['EVENT_PROF_WRITE_CSV']
+        @write_json = ENV['EVENT_PROF_WRITE_JSON']
 
         RSpecStamp.config.tags = @stamp if stamp?
       end
 
-      def write_csv?
-        !@write_csv.nil?
+      def write_json?
+        !@write_json.nil?
       end
 
       def stamp?
@@ -109,12 +109,9 @@ module TestProf
         @total_count = 0
         @total_time = 0.0
 
-        return unless config.write_csv?
-        File.write(build_path('group'), nil)
-        TestProf.write_csv(build_path('group'), %w[location top_level_description time count total_examples])
-
-        File.write(build_path('example'), nil) if config.per_example?
-        TestProf.write_csv(build_path('example'), %w[location description example_time example_count])
+        return unless config.write_json?
+        TestProf.start_json(build_path('group'))
+        TestProf.start_json(build_path('example')) if config.per_example?
       end
 
       def track(time)
@@ -143,9 +140,10 @@ module TestProf
 
         @current_group = nil
 
-        return unless config.write_csv?
         # TODO: this is rspec-specific
-        TestProf.write_csv(build_path('group'), [id.metadata[:location], id.top_level_description, @time, @count, @total_examples])
+        return unless config.write_json?
+        data = { locaton: id.metadata[:location], description: id.description, time: @example_time, examples: @total_examples }
+        TestProf.write_json(build_path('group'), data)
       end
 
       def example_started(id)
@@ -162,9 +160,16 @@ module TestProf
         @examples << data unless data[rank_by].zero?
         @current_example = nil
 
-        return unless config.write_csv?
         # TODO: this is rspec-specific
-        TestProf.write_csv(build_path('example'), [id.metadata[:location], id.description, @example_time, @example_count])
+        return unless config.write_json?
+        data = { locaton: id.metadata[:location], description: id.description, time: @example_time, count: @example_count }
+        TestProf.write_json(build_path('example'), data)
+      end
+
+      def suite_finished
+        return unless config.write_json?
+        TestProf.finish_json(build_path('group'))
+        TestProf.finish_json(build_path('example')) if config.per_example?
       end
 
       def results
@@ -189,7 +194,7 @@ module TestProf
 
       def build_path(mode)
         TestProf.artifact_path(
-          "event-prof-report-#{event}-#{mode}.csv"
+          "event-prof-report-#{event}-#{mode}.json"
         )
       end
 
