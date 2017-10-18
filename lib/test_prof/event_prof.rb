@@ -111,7 +111,10 @@ module TestProf
 
         return unless config.write_csv?
         File.write(build_path('group'), nil)
+        TestProf.write_csv(build_path('group'), %w[location top_level_description time count total_examples])
+
         File.write(build_path('example'), nil) if config.per_example?
+        TestProf.write_csv(build_path('example'), %w[location description example_time example_count])
       end
 
       def track(time)
