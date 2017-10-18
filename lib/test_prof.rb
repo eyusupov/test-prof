@@ -127,7 +127,7 @@ module TestProf
       @output = $stdout
       @color = true
       @output_dir = "tmp/test_prof"
-      @timestamps = false
+      @timestamps = !ENV['TEST_PROF_TIMESTAMPS'].nil?
     end
 
     def color?
