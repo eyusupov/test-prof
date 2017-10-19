@@ -78,7 +78,7 @@ module TestProf
       with_timestamps(
         ::File.join(
           config.output_dir,
-          filename
+          with_suffix(filename)
         )
       )
     end
@@ -109,6 +109,11 @@ module TestProf
       yield if ENV[env_var] && (val.nil? || ENV[env_var] == val)
     end
 
+    def with_suffix(filename)
+      return filename unless config.suffix
+      ::File.basename(filename, '.*') + '.' + config.suffix + File.extname(filename)
+    end
+
     def with_timestamps(path)
       return path unless config.timestamps?
       timestamps = "-#{now.to_i}"
@@ -121,9 +126,11 @@ module TestProf
     attr_accessor :output,      # IO to write output messages.
                   :color,       # Whether to colorize output or not
                   :output_dir,  # Directory to store artifacts
-                  :timestamps   # Whethere to use timestamped names for artifacts
+                  :timestamps,  # Whether to use timestamped names for artifacts
+                  :suffix
 
     def initialize
+      @suffix = ENV['TEST_ENV_NUMBER']
       @output = $stdout
       @color = true
       @output_dir = "tmp/test_prof"
