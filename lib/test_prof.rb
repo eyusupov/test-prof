@@ -106,7 +106,7 @@ module TestProf
     private
 
     def activate!(env_var, val)
-      yield if ENV[env_var] && (val.nil? || ENV[env_var] == val)
+      yield if ENV[env_var] && (val.nil? || ENV[env_var].split(',').include?(val))
     end
 
     def with_suffix(filename)

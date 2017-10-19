@@ -32,10 +32,10 @@ module TestProf
       }.freeze
 
       attr_accessor :instrumenter, :top_count, :per_example,
-                    :rank_by, :event, :write_json
+                    :rank_by, :events, :write_json
 
       def initialize
-        @event = ENV['EVENT_PROF']
+        @events = ENV['EVENT_PROF'].split(',')
         @instrumenter = :active_support
         @top_count = (ENV['EVENT_PROF_TOP'] || 5).to_i
         @per_example = ENV['EVENT_PROF_EXAMPLES'] == '1'
@@ -77,12 +77,14 @@ module TestProf
         yield config
       end
 
-      # Returns new configured instance of profiler
+      # Returns new configured instances of profilers
       def build
-        Profiler.new(
-          event: config.event,
-          instrumenter: config.resolve_instrumenter
-        )
+        config.events.map do |event|
+          Profiler.new(
+            event: event,
+            instrumenter: config.resolve_instrumenter
+          )
+        end
       end
     end
 
