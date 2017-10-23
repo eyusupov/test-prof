@@ -126,7 +126,7 @@ module TestProf
 
         return if @current_example.nil?
 
-        @example_time += time
+        @example_event_time += time
         @example_count += 1
       end
 
@@ -144,7 +144,7 @@ module TestProf
 
         # TODO: this is rspec-specific
         return unless config.write_json?
-        data = { location: id.metadata[:location], description: id.description, time: @example_time, count: @count, examples: @total_examples }
+        data = { location: id.metadata[:location], description: id.description, time: @example_event_time, count: @count, examples: @total_examples }
         TestProf.write_json(build_path('group'), data)
       end
 
@@ -152,19 +152,21 @@ module TestProf
         return unless config.per_example?
         reset_example!
         @current_example = id
+        @example_start_time = RSpec::Core::Time.now
       end
 
       def example_finished(id)
         @total_examples += 1
         return unless config.per_example?
 
-        data = { id: id, time: @example_time, count: @example_count }
+        @example_end_time = RSpec::Core::Time.now
+        data = { id: id, time: @example_event_time, count: @example_count }
         @examples << data unless data[rank_by].zero?
         @current_example = nil
 
         # TODO: this is rspec-specific
         return unless config.write_json?
-        data = { location: id.metadata[:location], description: id.description, time: @example_time, count: @example_count }
+        data = { location: id.metadata[:location], description: id.description, time: @example_event_time, count: @example_count, total: @example_end_time - @example_start_time }
         TestProf.write_json(build_path('example'), data)
       end
 
@@ -211,7 +213,7 @@ module TestProf
 
       def reset_example!
         @example_count = 0
-        @example_time = 0.0
+        @example_event_time = 0.0
       end
     end
   end
