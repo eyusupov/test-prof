@@ -144,7 +144,7 @@ module TestProf
 
         # TODO: this is rspec-specific
         return unless config.write_json?
-        data = { location: id.metadata[:location], description: id.description, time: @example_event_time, count: @count, examples: @total_examples }
+        data = { location: id.metadata[:location], description: id.description, time: @time, count: @count, examples: @total_examples }
         TestProf.write_json(build_path('group'), data)
       end
 
