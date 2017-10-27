@@ -31,7 +31,7 @@ module TestProf
         active_support: 'ActiveSupport'
       }.freeze
 
-      attr_accessor :instrumenter, :top_count, :per_example, :per_payload,
+      attr_accessor :instrumenter, :top_count, :per_example, :per_event,
                     :rank_by, :events, :write_json
 
       def initialize
@@ -39,7 +39,7 @@ module TestProf
         @instrumenter = :active_support
         @top_count = (ENV['EVENT_PROF_TOP'] || 5).to_i
         @per_example = ENV['EVENT_PROF_EXAMPLES'] == '1'
-        @per_payload = ENV['EVENT_PROF_PAYLOAD'] == '1'
+        @per_event = ENV['EVENT_PROF_EVENTS'] == '1'
         @rank_by = (ENV['EVENT_PROF_RANK'] || :time).to_sym
         @stamp = ENV['EVENT_PROF_STAMP']
         @write_json = ENV['EVENT_PROF_WRITE_JSON']
@@ -59,8 +59,8 @@ module TestProf
         @per_example
       end
 
-      def per_payload?
-        @per_payload
+      def per_event?
+        @per_event
       end
 
       def resolve_instrumenter
@@ -103,7 +103,7 @@ module TestProf
 
         log :info, "EventProf enabled (#{@event})"
 
-        instrumenter.subscribe(event) { |time, payload| track(time, payload) }
+        instrumenter.subscribe(event) { |start, finish, payload| track(start, finish, payload) }
 
         @groups = Utils::SizedOrderedSet.new(
           top_count, sort_by: rank_by
@@ -119,10 +119,11 @@ module TestProf
         return unless config.write_json?
         TestProf.start_json(build_path('group'))
         TestProf.start_json(build_path('example')) if config.per_example?
-        TestProf.start_json(build_path('payload')) if config.per_payload?
+        TestProf.start_json(build_path('payload')) if config.per_event?
       end
 
-      def track(time, payload)
+      def track(start, finish, payload)
+        time = finish - start
         return if @current_group.nil?
         @total_time += time
         @total_count += 1
@@ -130,8 +131,9 @@ module TestProf
         @time += time
         @count += 1
 
-        if @current_example.nil? && config.per_payload?
-          data = { type: 'group', payload: payload, location: @current_group.metadata[:location], time: time }
+        if @current_example.nil? && config.per_event?
+          data = { type: 'group', location: @current_group.metadata[:location], start: start, finish: finish }
+          data.merge!(payload)
           TestProf.write_json(build_path('payload'), data)
         end
 
@@ -140,8 +142,9 @@ module TestProf
         @example_event_time += time
         @example_count += 1
 
-        return unless config.per_payload?
-        data = { type: 'example', payload: payload, location: @current_example.metadata[:location], time: time }
+        return unless config.per_event?
+        data = { type: 'example', location: @current_example.metadata[:location], start: start, finish: finish }
+        data.merge!(payload)
         TestProf.write_json(build_path('payload'), data)
       end
 
@@ -189,7 +192,7 @@ module TestProf
         return unless config.write_json?
         TestProf.finish_json(build_path('group'))
         TestProf.finish_json(build_path('example')) if config.per_example?
-        TestProf.finish_json(build_path('payload')) if config.per_payload?
+        TestProf.finish_json(build_path('payload')) if config.per_event?
       end
 
       def results
