@@ -19,6 +19,10 @@ module TestProf
       def bad?
         count > 0 && queries_count.zero?
       end
+
+      def to_hash
+        { count: count, time: time, queries_count: queries_count, bad: bad? }
+      end
     end
 
     IGNORED_QUERIES_PATTERN = %r{(
@@ -57,12 +61,17 @@ module TestProf
         subscribe!
 
         @stamp = ENV['FDOC_STAMP']
+        @json = ENV['FDOC_JSON']
 
         RSpecStamp.config.tags = @stamp if stamp?
       end
 
       def stamp?
         !@stamp.nil?
+      end
+
+      def json?
+        !@json.nil?
       end
 
       def start

@@ -23,6 +23,7 @@ module TestProf
         @count = 0
         @time = 0.0
         @example_groups = Hash.new { |h, k| h[k] = [] }
+        TestProf.start_json(build_path) if FactoryDoctor.json?
       end
 
       def example_started(_notification)
@@ -35,6 +36,7 @@ module TestProf
 
         result = FactoryDoctor.result
 
+        TestProf.write_json(build_path, result.to_hash.merge!({location: notification.example.metadata[:location]})) if FactoryDoctor.json?
         return unless result.bad?
 
         group = notification.example.example_group.parent_groups.last
@@ -53,6 +55,7 @@ module TestProf
       alias example_pending example_finished
 
       def print
+        TestProf.finish_json(build_path) if FactoryDoctor.json?
         return log(:info, SUCCESS_MESSAGE) if @example_groups.empty?
 
         msgs = []
@@ -118,6 +121,10 @@ module TestProf
       def pluralize_records(count)
         return "1 record" if count == 1
         "#{count} records"
+      end
+
+      def build_path
+        @path ||= TestProf.artifact_path("factory_doctor-report.json")
       end
     end
   end
