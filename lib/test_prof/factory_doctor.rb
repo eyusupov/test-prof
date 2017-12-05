@@ -64,6 +64,7 @@ module TestProf
         @json = ENV['FDOC_JSON']
 
         RSpecStamp.config.tags = @stamp if stamp?
+        TestProf.start_json(build_path) if FactoryDoctor.json?
       end
 
       def stamp?
@@ -94,6 +95,10 @@ module TestProf
       ensure
         @ignored = false
         res
+      end
+
+      def build_path
+        @path ||= TestProf.artifact_path("factory_doctor-report.json")
       end
 
       def ignore!
