@@ -8,7 +8,7 @@ module TestProf::EventProf
         raise ArgumentError, 'Block is required!' unless block_given?
 
         ::ActiveSupport::Notifications.subscribe(event) do |_event, start, finish, _id, payload|
-          yield start, finish, payload
+          yield (finish - start), payload
         end
       end
     end

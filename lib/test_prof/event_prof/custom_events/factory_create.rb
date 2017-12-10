@@ -27,11 +27,10 @@ module TestProf::EventProf::CustomEvents
         res = nil
         begin
           res =
-            if @depth == 1 || ENV['EVENT_PROF_FACTORY_CREATE_ALL']
+            if @depth == 1
               ActiveSupport::Notifications.instrument(
                 'factory.create',
-                name: factory,
-                depth: @depth
+                name: factory
               ) { yield }
             else
               yield
