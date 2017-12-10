@@ -7,8 +7,8 @@ module TestProf::EventProf
       def self.subscribe(event)
         raise ArgumentError, 'Block is required!' unless block_given?
 
-        ::ActiveSupport::Notifications.subscribe(event) do |_event, start, finish, _id, payload|
-          yield (finish - start), payload
+        ::ActiveSupport::Notifications.subscribe(event) do |_event, start, finish, *_args|
+          yield (finish - start)
         end
       end
     end
