@@ -17,20 +17,33 @@ module TestProf
       attr_accessor :mode
 
       def initialize
-        @mode = ENV['FPROF'] == 'flamegraph' ? :flamegraph : :simple
+        @mode =
+          case ENV['FPROF']
+          when 'flamegraph'
+            :flamegraph
+          when 'json'
+            :json
+          else
+            :simple
+          end
+        @parent = @stack
       end
 
       # Whether we want to generate flamegraphs
       def flamegraph?
         @mode == :flamegraph
       end
+
+      def json?
+        @mode == :json
+      end
     end
 
     class Result # :nodoc:
-      attr_reader :stacks, :raw_stats
+      attr_reader :roots, :raw_stats
 
-      def initialize(stacks, raw_stats)
-        @stacks = stacks
+      def initialize(roots, raw_stats)
+        @roots = roots
         @raw_stats = raw_stats
       end
 
@@ -44,7 +57,7 @@ module TestProf
 
       def total
         return @total if instance_variable_defined?(:@total)
-        @total = @raw_stats.values.sum { |v| v[:total] }
+        @total = @raw_stats.values.sum { |v| v[:top_level_time] }
       end
 
       private
@@ -70,6 +83,9 @@ module TestProf
       # Patch factory lib, init vars
       def init
         @running = false
+        @stack = []
+        @nodes = []
+        @roots = []
 
         log :info, "FactoryProf enabled (#{config.mode} mode)"
 
@@ -83,9 +99,16 @@ module TestProf
 
         printer = config.flamegraph? ? Printers::Flamegraph : Printers::Simple
 
-        at_exit { printer.dump(result) }
+        at_exit do
+          File.write(build_path(), JSON.dump(result)) if config.json?
+          printer.dump(result)
+        end
 
         start
+      end
+
+      def build_path
+        @path ||= TestProf.artifact_path("factory_prof-report.json")
       end
 
       def start
@@ -98,36 +121,54 @@ module TestProf
       end
 
       def result
-        Result.new(@stacks, @stats)
+        Result.new(@roots, @stats)
       end
 
       def track(factory)
         return yield unless running?
+
         begin
           @depth += 1
-          @current_stack << factory if config.flamegraph?
           @stats[factory][:total] += 1
           @stats[factory][:top_level] += 1 if @depth == 1
+
+          start_time = TestProf.now
+
+          if config.flamegraph? || config.json?
+            node = [factory, start_time, nil, []]
+            @nodes << node
+          end
+
           yield
         ensure
+          end_time = TestProf.now
+          time = end_time - start_time
+
+          @stats[factory][:total_time] += time
+          @stats[factory][:top_level_time] += time if @depth == 1
           @depth -= 1
-          flush_stack if @depth.zero?
+
+          return unless config.flamegraph? || config.json?
+
+          node = @nodes.pop
+          node[2] = end_time
+
+          if @nodes.size.positive?
+            parent = @nodes.pop
+            parent[3] << node
+            @nodes << parent
+          else
+            @roots << node
+          end
         end
       end
 
       private
 
       def reset!
-        @stacks = [] if config.flamegraph?
+        @stack = [] if config.flamegraph? || config.json?
         @depth = 0
-        @stats = Hash.new { |h, k| h[k] = { name: k, total: 0, top_level: 0 } }
-        flush_stack
-      end
-
-      def flush_stack
-        return unless config.flamegraph?
-        @stacks << @current_stack unless @current_stack.nil? || @current_stack.empty?
-        @current_stack = []
+        @stats = Hash.new { |h, k| h[k] = { name: k, total: 0, top_level: 0, top_level_time: 0, total_time: 0 } }
       end
 
       def running?

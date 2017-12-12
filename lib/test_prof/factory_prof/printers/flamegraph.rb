@@ -11,49 +11,40 @@ module TestProf::FactoryProf
         def dump(result)
           return log(:info, "No factories detected") if result.raw_stats == {}
           report_data = {
-            total_stacks: result.stacks.size,
-            total: result.total
+            total_stacks: result.roots.size,
+            total: result.roots.inject(0.0) { |memo, node| memo + (node[2] - node[1]) }
           }
 
-          report_data[:roots] = convert_stacks(result)
+          @paths = {}
+          report_data[:roots] = convert(result)
 
           path = generate_html(report_data)
 
           log :info, "FactoryFlame report generated: #{path}"
         end
 
-        def convert_stacks(result)
-          res = []
+        def convert(result)
+          result.roots.map { |tree| traverse(result, tree, nil, '') }
+        end
 
-          paths = {}
-
-          result.stacks.each do |stack|
-            parent = nil
-            path = ""
-
-            stack.each do |sample|
-              path = "#{path}/#{sample}"
-
-              if paths[path]
-                node = paths[path]
-                node[:value] += 1
-              else
-                node = { name: sample, value: 1, total: result.raw_stats.fetch(sample)[:total] }
-                paths[path] = node
-
-                if parent.nil?
-                  res << node
-                else
-                  parent[:children] ||= []
-                  parent[:children] << node
-                end
-              end
-
-              parent = node
+        def traverse(result, tree, parent, path)
+          sample, start_time, end_time, children = tree
+          path = "#{path}/#{sample}"
+          if @paths[path]
+            node = @paths[path]
+            node[:value] += end_time - start_time
+            node[:total] += 1
+          else
+            node = { name: sample, value: end_time - start_time, total: 1 }
+            @paths[path] = node
+            if !parent.nil?
+              parent[:children] ||= []
+              parent[:children] << node
             end
           end
 
-          res
+          children.each { |child| traverse(result, child, node, path) }
+          node
         end
 
         private
